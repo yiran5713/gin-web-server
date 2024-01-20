@@ -16,5 +16,5 @@ func main() {
     })
 
     // Run the server
-    r.Run(":8081") // By default, it will listen on port 8080
+    r.Run() // By default, it will listen on port 8080
 }
