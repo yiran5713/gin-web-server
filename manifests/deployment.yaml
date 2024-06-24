@@ -2,11 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gin-web-server
-  namespace: argo-app
+  namespace: test-ns
   labels:
     app: gin-web-server
 spec:
-  replicas: 2
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
   selector:
     matchLabels:
       app: gin-web-server
@@ -15,30 +18,39 @@ spec:
       labels:
         app: gin-web-server
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - 192.168.1.138
+      volumes:
+        - name: pvc-evs
+          persistentVolumeClaim:
+            claimName: pvc-evs-auto
+      initContainers:
+        - name: create-dir
+          image: busybox
+          command: ['sh', '-c', 'mkdir /tmp/evs']
       containers:
         - name: gin-web-server
           image: swr.ap-southeast-3.myhuaweicloud.com/liuyiran/gin-web-server:latest
+          volumeMounts:
+            - name: pvc-evs
+              mountPath: /tmp/evs
+          env:
+            - name: WRITEPATH
+              value: /tmp/evs/
           resources:
             limits:
               cpu: "1"
-              memory: 2Gi
+              memory: 1Gi
             requests:
               cpu: "1"
-              memory: 2Gi
+              memory: 1Gi
+          imagePullPolicy: Always
       imagePullSecrets:
         - name: default-secret
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: gin-web-server
-  namespace: argo-app
-spec:
-  type: ClusterIP
-  selector:
-    app: gin-web-server
-  ports:
-    - port: 8080
-      targetPort: 8080
